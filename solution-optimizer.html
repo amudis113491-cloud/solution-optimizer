@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案分析与优化专家 · ProPlan AI</title>
+<style>
+:root{
+  --bg:#070c16;--bg2:#0c1628;--bg3:rgba(14,22,44,0.55);--bg4:rgba(8,14,28,0.92);
+  --border:rgba(80,140,255,0.09);--borderh:rgba(80,160,255,0.28);--borderf:rgba(80,160,255,0.5);
+  --c0:#4f9eff;--c1:#a78bfa;--c2:#34d399;--c3:#fbbf24;--c4:#f87171;--c5:#22d3ee;--c6:#fb923c;
+  --g0:rgba(79,158,255,0.08);--g1:rgba(167,139,250,0.08);--g2:rgba(52,211,153,0.06);
+  --text:#dde6f5;--dim:#8da8cc;--muted:#4a6080;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter','PingFang SC','Microsoft YaHei',sans-serif;min-height:100vh;overflow-x:hidden;font-size:13px}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(79,158,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(79,158,255,.018) 1px,transparent 1px);background-size:56px 56px}
+body::after{content:'';position:fixed;pointer-events:none;z-index:0;top:-20%;right:-10%;width:60%;height:60%;background:radial-gradient(ellipse,rgba(79,158,255,.03) 0%,transparent 60%)}
+
+/* HEADER */
+.hdr{position:sticky;top:0;z-index:200;height:54px;background:rgba(7,12,22,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.hdr-brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.hdr-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--c0),var(--c1));display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 16px rgba(79,158,255,.38)}
+.hdr-name{font-size:14px;font-weight:700;letter-spacing:1.4px;background:linear-gradient(135deg,var(--c0),var(--c1));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hdr-tag{font-size:10px;color:var(--muted);letter-spacing:1.5px;margin-top:1px}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.status-pill{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:10px;background:var(--g0);border:1px solid var(--borderh);color:var(--c0)}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--c2);box-shadow:0 0 6px var(--c2);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.btn-cfg{padding:5px 13px;border-radius:7px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--borderh);background:var(--g0);color:var(--c0);transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.btn-cfg:hover{background:rgba(79,158,255,.15);box-shadow:0 0 14px rgba(79,158,255,.2)}
+
+/* SETTINGS DRAWER */
+.settings-drawer{position:fixed;top:54px;right:0;width:360px;background:var(--bg4);border-left:1px solid var(--borderh);border-bottom:1px solid var(--borderh);backdrop-filter:blur(20px);z-index:180;padding:20px;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);border-radius:0 0 0 16px;max-height:calc(100vh - 54px);overflow-y:auto}
+.settings-drawer.open{transform:translateX(0)}
+.cfg-ttl{font-size:11px;font-weight:700;color:var(--c0);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.cfg-section{margin-bottom:18px}
+.cfg-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.cfg-input,.cfg-select{width:100%;padding:7px 11px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;transition:border-color .2s}
+.cfg-input:focus,.cfg-select:focus{border-color:var(--c0);box-shadow:0 0 0 2px rgba(79,158,255,.12)}
+.cfg-select option{background:#0c1628}
+.cfg-range{width:100%;accent-color:var(--c0)}
+.cfg-range-row{display:flex;align-items:center;gap:10px}
+.cfg-range-val{font-size:11px;color:var(--c0);min-width:28px;text-align:right}
+.cfg-hint{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5}
+.cfg-divider{height:1px;background:var(--border);margin:14px 0}
+.cfg-type-tabs{display:flex;gap:6px;margin-bottom:12px}
+.cfg-tab{padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--muted);transition:all .2s}
+.cfg-tab.active{border-color:var(--c0);color:var(--c0);background:var(--g0)}
+.api-model-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.model-opt{padding:7px 10px;border-radius:7px;border:1px solid var(--border);cursor:pointer;font-size:11px;color:var(--dim);transition:all .2s;text-align:center;line-height:1.3}
+.model-opt:hover{border-color:var(--borderh);color:var(--text)}
+.model-opt.sel{border-color:var(--c1);color:var(--c1);background:var(--g1)}
+.model-name{font-weight:600}
+.model-desc{font-size:9px;color:var(--muted);margin-top:2px}
+.cfg-save-btn{width:100%;padding:8px;border-radius:8px;background:linear-gradient(135deg,var(--c0),var(--c1));border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;margin-top:6px;transition:opacity .2s}
+.cfg-save-btn:hover{opacity:.88}
+
+/* MAIN LAYOUT */
+.main{position:relative;z-index:1;display:grid;grid-template-columns:420px 1fr;min-height:calc(100vh - 54px);gap:0}
+@media(max-width:1024px){.main{grid-template-columns:1fr;grid-template-rows:auto 1fr}}
+
+/* LEFT PANEL */
+.l-panel{border-right:1px solid var(--border);padding:20px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;max-height:calc(100vh - 54px);position:sticky;top:54px}
+.panel-ttl{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.ttl-bar{width:3px;height:13px;background:linear-gradient(to bottom,var(--c0),var(--c1));border-radius:2px;flex-shrink:0}
+
+/* DOMAIN SELECTOR */
+.domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.domain-card{padding:9px 11px;border-radius:9px;border:1px solid var(--border);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim)}
+.domain-card:hover{border-color:var(--borderh);color:var(--text);background:var(--g0)}
+.domain-card.sel{border-color:var(--c0);color:var(--c0);background:var(--g0);box-shadow:0 0 12px rgba(79,158,255,.12)}
+.domain-card.sel .d-icon{filter:drop-shadow(0 0 4px var(--c0))}
+.d-icon{font-size:16px;flex-shrink:0}
+.d-name{font-weight:600;line-height:1.2}
+.d-sub{font-size:9px;color:var(--muted);margin-top:1px}
+
+/* INPUT AREA */
+.input-wrap{position:relative}
+.sol-textarea{width:100%;min-height:220px;padding:13px 14px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:11px;color:var(--text);font-size:12.5px;line-height:1.7;font-family:inherit;resize:vertical;outline:none;transition:border-color .2s;scrollbar-width:thin;scrollbar-color:var(--muted) transparent}
+.sol-textarea::placeholder{color:var(--muted)}
+.sol-textarea:focus{border-color:var(--borderh);box-shadow:0 0 0 2px rgba(79,158,255,.08)}
+.textarea-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding:0 2px}
+.char-count{font-size:10px;color:var(--muted)}
+.clear-btn{font-size:10px;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:4px;transition:color .2s}
+.clear-btn:hover{color:var(--c4)}
+
+/* ANALYSIS OPTIONS */
+.opts-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.opt-chip{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:11px;color:var(--muted);transition:all .2s;user-select:none}
+.opt-chip:hover{border-color:var(--borderh);color:var(--dim)}
+.opt-chip.on{border-color:rgba(52,211,153,.3);color:var(--c2);background:var(--g2)}
+.opt-chip input{display:none}
+.opt-dot{width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor;flex-shrink:0;position:relative;transition:all .2s}
+.opt-chip.on .opt-dot{background:var(--c2);border-color:var(--c2)}
+.opt-chip.on .opt-dot::after{content:'';position:absolute;inset:1.5px;border-radius:50%;background:#fff;opacity:.6}
+
+/* DEPTH & STYLE */
+.tab-group{display:flex;gap:5px}
+.tab-btn{flex:1;padding:6px 8px;border-radius:7px;border:1px solid var(--border);font-size:11px;cursor:pointer;color:var(--muted);transition:all .2s;text-align:center;font-family:inherit}
+.tab-btn:hover{border-color:var(--borderh);color:var(--dim)}
+.tab-btn.act{border-color:var(--c0);color:var(--c0);background:var(--g0)}
+
+/* ACTION BUTTONS */
+.actions-grid{display:flex;flex-direction:column;gap:8px}
+.action-btn{width:100%;padding:11px 16px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;position:relative;overflow:hidden}
+.action-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.06),transparent);pointer-events:none}
+.action-btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-analyze{background:linear-gradient(135deg,rgba(79,158,255,.18),rgba(79,158,255,.08));border-color:rgba(79,158,255,.4);color:var(--c0)}
+.btn-analyze:hover:not(:disabled){background:linear-gradient(135deg,rgba(79,158,255,.28),rgba(79,158,255,.15));box-shadow:0 0 20px rgba(79,158,255,.25);transform:translateY(-1px)}
+.btn-optimize{background:linear-gradient(135deg,rgba(167,139,250,.18),rgba(167,139,250,.08));border-color:rgba(167,139,250,.4);color:var(--c1)}
+.btn-optimize:hover:not(:disabled){background:linear-gradient(135deg,rgba(167,139,250,.28),rgba(167,139,250,.15));box-shadow:0 0 20px rgba(167,139,250,.25);transform:translateY(-1px)}
+.btn-rewrite{background:linear-gradient(135deg,rgba(52,211,153,.18),rgba(52,211,153,.08));border-color:rgba(52,211,153,.4);color:var(--c2)}
+.btn-rewrite:hover:not(:disabled){background:linear-gradient(135deg,rgba(52,211,153,.28),rgba(52,211,153,.15));box-shadow:0 0 20px rgba(52,211,153,.2);transform:translateY(-1px)}
+.btn-stop{background:linear-gradient(135deg,rgba(248,113,113,.15),rgba(248,113,113,.07));border-color:rgba(248,113,113,.35);color:var(--c4)}
+.btn-stop:hover{background:linear-gradient(135deg,rgba(248,113,113,.25),rgba(248,113,113,.12));box-shadow:0 0 16px rgba(248,113,113,.2)}
+
+/* RIGHT PANEL */
+.r-panel{display:flex;flex-direction:column;min-height:calc(100vh - 54px)}
+
+/* OUTPUT TABS */
+.out-tabs{display:flex;align-items:center;padding:14px 20px 0;gap:2px;border-bottom:1px solid var(--border);background:rgba(7,12,22,.6)}
+.out-tab{padding:7px 16px;border-radius:8px 8px 0 0;font-size:11.5px;cursor:pointer;color:var(--muted);transition:all .2s;border:1px solid transparent;border-bottom:none;position:relative;bottom:-1px}
+.out-tab:hover{color:var(--dim)}
+.out-tab.act{color:var(--c0);border-color:var(--borderh);background:var(--bg3);font-weight:600}
+.out-tab-pane{display:none;flex:1;overflow:hidden;flex-direction:column}
+.out-tab-pane.act{display:flex}
+.out-toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);background:rgba(8,14,28,.5);flex-shrink:0}
+.out-toolbar-l{display:flex;align-items:center;gap:8px}
+.out-toolbar-r{display:flex;align-items:center;gap:6px}
+.mode-badge{padding:3px 10px;border-radius:12px;font-size:10px;font-weight:600;letter-spacing:.6px}
+.badge-analyze{background:rgba(79,158,255,.12);border:1px solid rgba(79,158,255,.25);color:var(--c0)}
+.badge-optimize{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);color:var(--c1)}
+.badge-rewrite{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--c2)}
+.token-info{font-size:10px;color:var(--muted)}
+.sm-btn{padding:5px 11px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:rgba(255,255,255,.03);transition:all .2s;display:inline-flex;align-items:center;gap:4px;font-family:inherit}
+.sm-btn:hover{border-color:var(--borderh);color:var(--text);background:var(--g0)}
+.sm-btn.success{color:var(--c2);border-color:rgba(52,211,153,.3)}
+
+/* RESULT AREA */
+.result-scroll{flex:1;overflow-y:auto;padding:24px 28px;scrollbar-width:thin;scrollbar-color:var(--muted) transparent}
+.result-content{max-width:860px;margin:0 auto}
+
+/* EMPTY STATE */
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;text-align:center;color:var(--muted)}
+.empty-icon{font-size:52px;opacity:.35;filter:grayscale(.3)}
+.empty-ttl{font-size:15px;font-weight:600;color:var(--dim)}
+.empty-sub{font-size:12px;line-height:1.7;max-width:360px}
+.empty-chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:6px}
+.empty-chip{padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;color:var(--muted)}
+
+/* STREAMING INDICATOR */
+.streaming-bar{display:flex;align-items:center;gap:10px;padding:10px 20px;background:rgba(79,158,255,.04);border-bottom:1px solid rgba(79,158,255,.1);font-size:11px;color:var(--c0);flex-shrink:0}
+.stream-dots{display:flex;gap:4px}
+.stream-dot{width:5px;height:5px;border-radius:50%;background:var(--c0);animation:stream-bounce .8s ease-in-out infinite}
+.stream-dot:nth-child(2){animation-delay:.15s}
+.stream-dot:nth-child(3){animation-delay:.3s}
+@keyframes stream-bounce{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.stream-stat{margin-left:auto;font-size:10px;color:var(--muted)}
+
+/* MARKDOWN STYLES */
+.md h1{font-size:18px;font-weight:700;color:var(--text);margin:0 0 16px;padding-bottom:10px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,var(--c0),var(--c1));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.md h2{font-size:14px;font-weight:700;color:var(--text);margin:22px 0 10px;display:flex;align-items:center;gap:7px}
+.md h2::before{content:'';width:3px;height:15px;background:linear-gradient(to bottom,var(--c0),var(--c1));border-radius:2px;flex-shrink:0;display:inline-block}
+.md h3{font-size:13px;font-weight:600;color:var(--dim);margin:16px 0 8px}
+.md h4{font-size:12px;font-weight:600;color:var(--c5);margin:12px 0 6px}
+.md p{font-size:13px;line-height:1.8;color:var(--dim);margin:8px 0}
+.md ul,.md ol{padding-left:20px;margin:8px 0}
+.md li{font-size:13px;line-height:1.8;color:var(--dim);margin:3px 0}
+.md li::marker{color:var(--c0)}
+.md strong{color:var(--text);font-weight:600}
+.md em{color:var(--c5);font-style:italic}
+.md code{background:rgba(79,158,255,.1);border:1px solid rgba(79,158,255,.15);padding:1px 6px;border-radius:4px;font-size:12px;color:var(--c0);font-family:'Consolas','Courier New',monospace}
+.md pre{background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:12px 0;overflow-x:auto}
+.md pre code{background:none;border:none;padding:0;font-size:12px;color:var(--c5)}
+.md blockquote{border-left:3px solid var(--c1);padding:10px 16px;margin:12px 0;background:rgba(167,139,250,.05);border-radius:0 8px 8px 0}
+.md blockquote p{color:var(--c1);margin:0;font-style:italic}
+.md hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+.md table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}
+.md th{padding:8px 13px;font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--borderh);background:rgba(79,158,255,.04);text-align:left}
+.md td{padding:8px 13px;color:var(--dim);border-bottom:1px solid rgba(255,255,255,.024);vertical-align:middle}
+.md tr:last-child td{border-bottom:none}
+.md tr:hover td{background:rgba(255,255,255,.015)}
+.md .score-star{color:var(--c3);letter-spacing:1px}
+.md a{color:var(--c0);text-decoration:none}
+.md a:hover{text-decoration:underline}
+
+/* COMPARISON VIEW */
+.compare-pane{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.compare-header{padding:12px 20px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);background:rgba(8,14,28,.5);flex-shrink:0}
+.compare-cols{display:grid;grid-template-columns:1fr 1fr;flex:1;overflow:hidden;gap:0}
+.compare-col{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+.compare-col:last-child{border-right:none}
+.compare-col-hdr{padding:10px 16px;font-size:11px;font-weight:600;color:var(--dim);border-bottom:1px solid var(--border);background:rgba(8,14,28,.4);display:flex;align-items:center;gap:6px;flex-shrink:0}
+.compare-col-body{flex:1;overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--muted) transparent;font-size:13px;line-height:1.75;color:var(--dim);white-space:pre-wrap;word-break:break-word}
+
+/* ERROR STATE */
+.error-box{display:flex;align-items:flex-start;gap:10px;padding:14px 16px;border-radius:10px;background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.22);color:var(--c4);font-size:12px;line-height:1.6;margin:20px}
+.error-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+/* HISTORY PANEL */
+.history-list{display:flex;flex-direction:column;gap:8px;padding:16px 20px}
+.history-item{padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(12,22,40,.5);cursor:pointer;transition:all .2s}
+.history-item:hover{border-color:var(--borderh);background:var(--g0)}
+.history-hd{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.history-mode{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600;letter-spacing:.5px}
+.history-domain{font-size:10px;color:var(--muted)}
+.history-time{font-size:10px;color:var(--muted);margin-left:auto}
+.history-preview{font-size:11.5px;color:var(--dim);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.no-history{padding:40px 20px;text-align:center;font-size:12px;color:var(--muted)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--muted);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--dim)}
+
+/* TRANSITIONS */
+.fade-in{animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARD */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;backdrop-filter:blur(12px);padding:14px 16px}
+
+/* responsive */
+@media(max-width:768px){
+  .l-panel{max-height:none;position:static}
+  .r-panel{min-height:60vh}
+  .compare-cols{grid-template-columns:1fr}
+  .domain-grid{grid-template-columns:1fr 1fr 1fr}
+}
+
+/* ===== FILE UPLOAD ===== */
+.upload-zone{border:1.5px dashed var(--borderh);border-radius:10px;padding:14px 12px;text-align:center;cursor:pointer;transition:all .22s;background:rgba(79,158,255,.025);position:relative}
+.upload-zone:hover{border-color:var(--c0);background:var(--g0);box-shadow:0 0 0 3px rgba(79,158,255,.07)}
+.upload-zone.drag-over{border-color:var(--c0);background:rgba(79,158,255,.1);box-shadow:0 0 0 3px rgba(79,158,255,.15);transform:scale(1.01)}
+.upload-zone-inner{display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none}
+.upload-big-icon{font-size:26px;opacity:.55}
+.upload-text{font-size:12px;color:var(--dim);font-weight:500}
+.upload-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.upload-types{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:6px}
+.type-tag{padding:2px 8px;border-radius:10px;font-size:9px;letter-spacing:.4px;font-weight:600;border:1px solid}
+.t-pdf{color:#f87171;border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.06)}
+.t-word{color:#4f9eff;border-color:rgba(79,158,255,.3);background:rgba(79,158,255,.06)}
+.t-ppt{color:#fb923c;border-color:rgba(251,146,60,.3);background:rgba(251,146,60,.06)}
+.t-excel{color:#34d399;border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.06)}
+.t-txt{color:#8da8cc;border-color:rgba(141,168,204,.2);background:rgba(141,168,204,.05)}
+.file-list{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.file-chip{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;border:1px solid var(--border);background:rgba(12,22,40,.65);font-size:11px;color:var(--dim);transition:border-color .2s;animation:fadeIn .25s ease}
+.file-chip:hover{border-color:var(--borderh)}
+.file-chip-icon{font-size:18px;flex-shrink:0;line-height:1}
+.file-chip-info{flex:1;min-width:0}
+.file-chip-name{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
+.file-chip-meta{font-size:10px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:5px}
+.parse-progress{flex:1;height:2px;background:var(--border);border-radius:1px;overflow:hidden;display:none}
+.parse-progress-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--c0),var(--c2));border-radius:1px;transition:width .4s ease}
+.chip-status{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;flex-shrink:0;white-space:nowrap}
+.cs-loading{color:var(--c3)}.cs-ok{color:var(--c2)}.cs-err{color:var(--c4)}
+.chip-rm{cursor:pointer;color:var(--muted);width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:4px;flex-shrink:0;font-size:12px;transition:all .15s}
+.chip-rm:hover{color:var(--c4);background:rgba(248,113,113,.1)}
+.upload-actions{display:flex;justify-content:flex-end;margin-top:6px}
+.clear-files-btn{font-size:10px;color:var(--muted);cursor:pointer;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;transition:all .15s}
+.clear-files-btn:hover{color:var(--c4);border-color:rgba(248,113,113,.3)}
+
+/* ===== PROVIDER CARDS ===== */
+.provider-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.provider-card{padding:9px 11px;border-radius:9px;border:1px solid var(--border);cursor:pointer;transition:all .2s;font-size:11px;color:var(--muted)}
+.provider-card:hover{border-color:var(--borderh);color:var(--dim);background:var(--g0)}
+.provider-card.sel{border-color:var(--c2);color:var(--c2);background:rgba(52,211,153,.06)}
+.provider-card-name{font-weight:700;font-size:11.5px;margin-bottom:2px}
+.provider-card-sub{font-size:9.5px;opacity:.7;line-height:1.3}
+.free-badge{display:inline-block;padding:1px 5px;border-radius:8px;font-size:8.5px;font-weight:700;letter-spacing:.4px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);color:var(--c2);margin-left:4px;vertical-align:middle}
+.get-key-link{font-size:10.5px;color:var(--c0);text-decoration:none;display:inline-flex;align-items:center;gap:4px;padding:3px 0;transition:opacity .2s}
+.get-key-link:hover{opacity:.75;text-decoration:underline}
+.key-hint{font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);color:var(--c2);font-weight:600;margin-left:4px}
+
+/* ===== ERROR ACTIONS ===== */
+.error-box{display:flex;align-items:flex-start;gap:10px;padding:16px 18px;border-radius:12px;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);font-size:12.5px;line-height:1.7;margin:20px}
+.error-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.err-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.err-action-btn{padding:6px 14px;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(79,158,255,.4);background:rgba(79,158,255,.1);color:var(--c0);transition:all .2s;font-family:inherit}
+.err-action-btn:hover{background:rgba(79,158,255,.2);box-shadow:0 0 12px rgba(79,158,255,.2)}
+.err-action-btn.danger{border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.1);color:var(--c4)}
+.err-detail-row{color:var(--dim);margin:2px 0}
+.err-list{padding-left:16px;margin:6px 0;color:var(--dim)}
+.err-list li{margin:3px 0;font-size:12px}
+.err-tech{font-size:10px;color:var(--muted);margin-top:8px;padding:8px 10px;background:rgba(0,0,0,.2);border-radius:6px;word-break:break-all;max-height:80px;overflow-y:auto;font-family:'Consolas','Courier New',monospace}
+
+/* ===== TEST BTN ===== */
+.cfg-test-btn{width:100%;padding:7px;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid var(--borderh);background:var(--g0);color:var(--c0);transition:all .2s;margin-top:4px;font-family:inherit}
+.cfg-test-btn:hover:not(:disabled){background:rgba(79,158,255,.15);box-shadow:0 0 12px rgba(79,158,255,.15)}
+.cfg-test-btn:disabled{opacity:.5;cursor:not-allowed}
+.cfg-test-btn.ok{color:var(--c2);border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.08)}
+.cfg-test-btn.fail{color:var(--c4);border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.08)}
+.key-format-hint{font-size:10px;color:var(--c3);margin-top:4px;display:none}
+</style>
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- mammoth.js (DOCX) — pinned to 1.6.0 (stable), unpkg primary -->
+<script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"
+        onerror="console.warn('[ProPlan] mammoth primary CDN failed, will retry lazily')"></script>
+<!-- JSZip (PPTX) -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
+        onerror="console.warn('[ProPlan] jszip primary CDN failed, will retry lazily')"></script>
+<!-- SheetJS (XLSX) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+        onerror="console.warn('[ProPlan] xlsx primary CDN failed, will retry lazily')"></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-icon">🧠</div>
+    <div>
+      <div class="hdr-name">PROPLAN AI</div>
+      <div class="hdr-tag">方案分析与优化专家</div>
+    </div>
+  </div>
+  <div class="hdr-r">
+    <div class="status-pill" id="statusPill">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">就绪</span>
+    </div>
+    <button class="btn-cfg" onclick="toggleSettings()">🆓 模型配置</button>
+  </div>
+</header>
+
+<!-- SETTINGS DRAWER -->
+<div class="settings-drawer" id="settingsDrawer">
+  <div class="cfg-ttl">🆓 免费开源模型配置</div>
+
+  <div class="cfg-section">
+    <div class="cfg-label">选择服务平台</div>
+    <div class="provider-grid" id="providerGrid">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-label">API Key <span class="key-hint" id="keyHintBadge"></span></div>
+    <input type="password" class="cfg-input" id="cfgApiKey" placeholder="请输入 API Key">
+    <div class="cfg-hint" id="cfgKeyHint">密钥仅存储在浏览器本地，不会上传到任何服务器</div>
+    <a class="get-key-link" id="getKeyLink" href="#" target="_blank" style="margin-top:6px">→ 免费注册获取 API Key</a>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-label">API Endpoint <span style="font-size:9px;color:var(--muted)">(自动填写，可修改)</span></div>
+    <input type="text" class="cfg-input" id="cfgEndpoint" placeholder="">
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-label">选择模型</div>
+    <div class="api-model-grid" id="modelGrid">
+      <!-- populated by JS -->
+    </div>
+    <div style="margin-top:6px">
+      <div class="cfg-label">自定义模型 ID（可选）</div>
+      <input type="text" class="cfg-input" id="cfgCustomModel" placeholder="留空则使用上方所选">
+    </div>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-label">温度（创意度）</div>
+    <div class="cfg-range-row">
+      <input type="range" class="cfg-range" id="cfgTemp" min="0" max="1" step="0.05" value="0.72">
+      <span class="cfg-range-val" id="tempVal">0.72</span>
+    </div>
+    <div class="cfg-hint">0 = 精确稳定 / 1 = 富有创意</div>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-label">最大 Token 数</div>
+    <select class="cfg-select" id="cfgMaxTokens">
+      <option value="2048">2048（快速）</option>
+      <option value="4096" selected>4096（标准）</option>
+      <option value="8192">8192（详尽）</option>
+      <option value="16384">16384（超长）</option>
+    </select>
+  </div>
+
+  <div class="cfg-divider"></div>
+  <button class="cfg-test-btn" id="cfgTestBtn" onclick="testConnection()">⚡ 验证连接</button>
+  <div class="key-format-hint" id="keyFormatHint"></div>
+  <button class="cfg-save-btn" onclick="saveSettings()">保存配置</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="l-panel">
+
+    <!-- INPUT -->
+    <div>
+      <div class="panel-ttl"><span class="ttl-bar"></span>上传文件 / 输入方案</div>
+
+      <!-- DROP ZONE -->
+      <div class="upload-zone" id="uploadZone"
+           onclick="document.getElementById('fileInput').click()"
+           ondragover="onDragOver(event)"
+           ondragleave="onDragLeave(event)"
+           ondrop="onDrop(event)">
+        <input type="file" id="fileInput" multiple
+               accept=".pdf,.docx,.doc,.pptx,.ppt,.xlsx,.xls,.txt,.md,.csv"
+               style="display:none" onchange="handleFileInput(event)">
+        <div class="upload-zone-inner">
+          <div class="upload-big-icon">📂</div>
+          <div class="upload-text">拖拽文件至此，或点击选择文件</div>
+          <div class="upload-sub">支持多文件同时上传，内容将自动合并到输入框</div>
+          <div class="upload-types">
+            <span class="type-tag t-pdf">PDF</span>
+            <span class="type-tag t-word">Word .docx</span>
+            <span class="type-tag t-ppt">PPT .pptx</span>
+            <span class="type-tag t-excel">Excel .xlsx</span>
+            <span class="type-tag t-txt">TXT / MD / CSV</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILE LIST -->
+      <div class="file-list" id="fileList"></div>
+      <div class="upload-actions" id="uploadActions" style="display:none">
+        <button class="clear-files-btn" onclick="clearAllFiles()">清除全部文件</button>
+      </div>
+
+      <!-- TEXTAREA -->
+      <div class="input-wrap" style="margin-top:10px">
+        <textarea class="sol-textarea" id="solInput" placeholder="在此粘贴或输入方案内容，或通过上方上传文件自动提取…
+
+支持直接输入文字，或上传 PDF/Word/PPT/Excel 文件，多个文件将自动合并。"></textarea>
+        <div class="textarea-footer">
+          <span class="char-count" id="charCount">0 字</span>
+          <span class="clear-btn" onclick="clearInput()">清空文本</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOMAIN -->
+    <div>
+      <div class="panel-ttl"><span class="ttl-bar"></span>专业领域</div>
+      <div class="domain-grid" id="domainGrid">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- OPTIONS -->
+    <div>
+      <div class="panel-ttl"><span class="ttl-bar"></span>分析维度</div>
+      <div class="opts-grid" id="optGrid">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- DEPTH & STYLE -->
+    <div>
+      <div class="panel-ttl"><span class="ttl-bar"></span>分析深度</div>
+      <div class="tab-group">
+        <button class="tab-btn" onclick="setDepth('quick',this)">快速</button>
+        <button class="tab-btn act" onclick="setDepth('standard',this)">标准</button>
+        <button class="tab-btn" onclick="setDepth('deep',this)">深度</button>
+      </div>
+    </div>
+    <div>
+      <div class="panel-ttl"><span class="ttl-bar"></span>输出风格</div>
+      <div class="tab-group">
+        <button class="tab-btn act" onclick="setStyle('professional',this)">专业报告</button>
+        <button class="tab-btn" onclick="setStyle('executive',this)">执行摘要</button>
+        <button class="tab-btn" onclick="setStyle('actionable',this)">行动导向</button>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="actions-grid" id="actionGrid">
+      <button class="action-btn btn-analyze" onclick="startAnalysis('analyze')" id="btnAnalyze">
+        🔍 全面分析
+      </button>
+      <button class="action-btn btn-optimize" onclick="startAnalysis('optimize')" id="btnOptimize">
+        ✨ 优化建议
+      </button>
+      <button class="action-btn btn-rewrite" onclick="startAnalysis('rewrite')" id="btnRewrite">
+        ✍ 智能改写
+      </button>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="r-panel">
+
+    <!-- TABS -->
+    <div class="out-tabs">
+      <div class="out-tab act" onclick="switchTab('result',this)" id="tab-result">分析结果</div>
+      <div class="out-tab" onclick="switchTab('compare',this)" id="tab-compare">对比视图</div>
+      <div class="out-tab" onclick="switchTab('history',this)" id="tab-history">历史记录</div>
+    </div>
+
+    <!-- RESULT TAB -->
+    <div class="out-tab-pane act" id="pane-result" style="flex-direction:column">
+      <!-- toolbar -->
+      <div class="out-toolbar" id="resultToolbar" style="display:none">
+        <div class="out-toolbar-l">
+          <span class="mode-badge badge-analyze" id="modeBadge">分析</span>
+          <span class="token-info" id="tokenInfo"></span>
+        </div>
+        <div class="out-toolbar-r">
+          <button class="sm-btn" onclick="copyResult()" id="copyBtn">📋 复制</button>
+          <button class="sm-btn" onclick="exportMd()">⬇ 导出 MD</button>
+          <button class="sm-btn" onclick="exportTxt()">⬇ 导出 TXT</button>
+          <button class="sm-btn" onclick="sendToCompare()">⇄ 对比</button>
+        </div>
+      </div>
+      <!-- streaming bar -->
+      <div class="streaming-bar" id="streamingBar" style="display:none">
+        <div class="stream-dots">
+          <div class="stream-dot"></div>
+          <div class="stream-dot"></div>
+          <div class="stream-dot"></div>
+        </div>
+        <span id="streamMsg">AI 正在分析中，请稍候…</span>
+        <span class="stream-stat" id="streamStat"></span>
+        <button class="sm-btn btn-stop" onclick="stopStream()" style="margin-left:10px">■ 停止</button>
+      </div>
+      <!-- content -->
+      <div class="result-scroll" id="resultScroll">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">🧠</div>
+          <div class="empty-ttl">输入方案，开始专业分析</div>
+          <div class="empty-sub">选择专业领域，粘贴您的方案内容，点击下方按钮即可获得 AI 驱动的深度分析与优化建议。</div>
+          <div class="empty-chips">
+            <span class="empty-chip">🔍 多维度评分</span>
+            <span class="empty-chip">📊 行业基准对比</span>
+            <span class="empty-chip">💡 具体改进建议</span>
+            <span class="empty-chip">✍ 专业改写输出</span>
+            <span class="empty-chip">⚠ 风险识别</span>
+          </div>
+        </div>
+        <div class="result-content md fade-in" id="resultContent" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- COMPARE TAB -->
+    <div class="out-tab-pane" id="pane-compare" style="flex-direction:column">
+      <div class="compare-pane">
+        <div class="compare-header">原始方案 vs. AI 优化版本 — 对比查看</div>
+        <div class="compare-cols">
+          <div class="compare-col">
+            <div class="compare-col-hdr"><span>📄</span> 原始方案</div>
+            <div class="compare-col-body" id="compareOrig">尚无内容，请先完成分析并点击「对比」按钮。</div>
+          </div>
+          <div class="compare-col">
+            <div class="compare-col-hdr" style="color:var(--c2)"><span>✨</span> AI 优化版本</div>
+            <div class="compare-col-body md" id="compareNew">尚无内容。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div class="out-tab-pane" id="pane-history" style="flex-direction:column;overflow-y:auto">
+      <div class="out-toolbar">
+        <span style="font-size:11px;color:var(--muted)">最近分析记录（本地存储）</span>
+        <button class="sm-btn" onclick="clearHistory()">清空历史</button>
+      </div>
+      <div id="historyList"></div>
+    </div>
+
+  </div><!-- /r-panel -->
+</div><!-- /main -->
+
+<script>
+/* =====================================================================
+   STATE
+===================================================================== */
+const S = {
+  provider: 'siliconflow',
+  apiKey: '',
+  endpoint: 'https://api.siliconflow.cn/v1',
+  model: 'Qwen/Qwen2.5-72B-Instruct',
+  customModel: '',
+  temperature: 0.72,
+  maxTokens: 4096,
+  domain: 'it',
+  depth: 'standard',
+  style: 'professional',
+  opts: { benchmark: true, competitive: true, market: true, tech: true, finance: false, risk: true, roadmap: true, cases: false },
+  streaming: false,
+  abortCtrl: null,
+  rawResult: '',
+  tokenCount: 0,
+  history: []
+};
+
+/* =====================================================================
+   DOMAINS CONFIG
+===================================================================== */
+const DOMAINS = {
+  it: {
+    label: '信息技术 / 软件',
+    sub: '架构·开发·云计算',
+    icon: '💻',
+    expert: `你是一位拥有20年经验的资深技术战略顾问和软件架构师，曾主导多家独角兽企业和大型集团的技术战略与数字化转型。你精通：软件工程最佳实践、系统架构（单体/微服务/Serverless/事件驱动）、云计算（AWS/Azure/GCP）、DevOps与CI/CD、API设计、数据库选型与优化、性能调优、安全合规、技术债务管理、团队研发效能提升。你深度了解最新技术趋势：生成式AI集成、云原生架构、eBPF、WebAssembly、RAG/Agent工程化、平台工程等。你从商业价值、技术可行性、工程质量、市场时机、团队能力等多维度综合评判方案。`
+  },
+  ai: {
+    label: 'AI / 大数据',
+    sub: '机器学习·数据平台',
+    icon: '🤖',
+    expert: `你是一位顶尖的AI战略顾问和机器学习工程专家，深度参与过大型AI产品的从0到1全链路建设。你精通：大语言模型应用（LLM、RAG、Agent、Fine-tuning）、传统ML工程（特征工程、模型训练、MLOps）、数据工程（数据湖、实时计算、数仓架构）、AI伦理与合规、算法公平性、大数据平台（Spark/Flink/Kafka）。你了解AI商业化路径、模型成本优化、大模型与小模型的适用边界、AI监管趋势及行业落地的核心挑战。`
+  },
+  finance: {
+    label: '金融 / 金融科技',
+    sub: '投融资·银行·保险',
+    icon: '💰',
+    expert: `你是一位资深金融行业顾问，兼具投资银行、FinTech创业公司和监管机构的复合背景，拥有18年金融行业经验。你精通：金融产品设计（信贷/理财/保险/支付）、风险管理（信用/市场/操作/流动性风险）、金融合规（巴塞尔III、GDPR、PCI-DSS）、金融科技创新（开放银行、嵌入式金融、DeFi、CBDC）、资本市场、企业融资与估值、ESG投资趋势。你能从监管可行性、商业模式、风险收益比、市场竞争等维度做出专业判断。`
+  },
+  healthcare: {
+    label: '医疗 / 大健康',
+    sub: '医疗服务·数字健康',
+    icon: '🏥',
+    expert: `你是一位拥有医学背景的资深医疗行业顾问，深度参与过多家三甲医院信息化、互联网医疗平台和医疗器械企业的战略规划。你精通：医疗服务运营、医疗信息化（HIS/EMR/PACS）、数字医疗（互联网医院、AI辅助诊断、可穿戴健康）、医疗器械研发与注册、医药研发流程（新药临床试验）、医保政策、HIPAA/GDPR医疗数据合规、医疗供应链管理。你能从临床价值、监管路径、商业可持续性、患者体验等维度做出精准分析。`
+  },
+  manufacturing: {
+    label: '制造 / 工业',
+    sub: '精益制造·工业4.0',
+    icon: '🏭',
+    expert: `你是一位深耕制造业25年的工业战略专家和精益制造顾问，服务过多家全球500强制造企业。你精通：精益生产（Lean/六西格玛/TPS）、工业4.0与智能制造、供应链管理与优化、质量管理体系（ISO/IATF/AS9100）、工厂自动化与工业机器人、OEE提升、ERP/MES系统选型与实施、碳中和与绿色制造、工程设计与工艺优化。你能从产能利用率、成本结构、质量风险、供应链韧性、数字化成熟度等维度分析制造方案。`
+  },
+  marketing: {
+    label: '市场营销 / 品牌',
+    sub: '增长·内容·品牌策略',
+    icon: '📣',
+    expert: `你是一位曾服务于多家全球化品牌的顶级CMO级营销顾问，深刻理解线上线下整合营销生态。你精通：品牌战略与定位、整合营销传播（IMC）、数字营销（SEO/SEM/社交媒体/内容营销/KOL）、增长黑客、用户生命周期管理（CLV/CRM）、私域流量运营、数据驱动营销（DMP/CDP）、全球化营销本地化策略、营销ROI衡量体系。你了解各平台算法动态、消费者行为趋势、Z世代营销方法论及品牌危机管理。`
+  },
+  ecommerce: {
+    label: '电商 / 新零售',
+    sub: '平台·直播·O2O',
+    icon: '🛒',
+    expert: `你是一位深耕电商10年以上的新零售战略专家，参与过多个年GMV百亿级电商平台的战略规划与运营优化。你精通：电商平台运营（天猫/京东/拼多多/抖音电商）、直播电商生态、跨境电商合规与运营、新零售O2O模式、仓储与物流优化、电商数据分析（转化率/复购/客单价优化）、选品与供应链管理、用户留存策略、即时零售与前置仓模式。你了解各平台最新政策变化及流量格局演变。`
+  },
+  education: {
+    label: '教育 / 培训',
+    sub: 'K12·职业教育·EdTech',
+    icon: '📚',
+    expert: `你是一位具备教育学博士背景的教育行业资深顾问，深度参与过多家知名教育集团和EdTech企业的战略规划。你精通：K12教育（课程体系设计、教学质量管理）、职业教育与技能培训、高等教育改革、在线教育平台建设（MOOC/SPOC/直播课）、教育科技（AI自适应学习、虚拟仿真）、教育双减政策影响与应对、素质教育与考试培训的边界、教育企业商业模式与盈利路径。`
+  },
+  energy: {
+    label: '能源 / 新能源',
+    sub: '清洁能源·碳中和',
+    icon: '⚡',
+    expert: `你是一位能源行业资深战略顾问，覆盖传统能源与清洁能源领域，曾主导多个大型能源项目的可行性研究与战略规划。你精通：光伏/风电/储能技术路线、新能源并网与电力市场、碳交易与碳中和路径规划、绿氢经济、能源互联网与虚拟电厂、油气行业数字化转型、能源基础设施投资分析、国际能源政策与ESG合规。你能从技术成熟度、度电成本、政策支持、投资回报率等维度做出专业分析。`
+  },
+  logistics: {
+    label: '物流 / 供应链',
+    sub: '仓储·冷链·跨境',
+    icon: '🚚',
+    expert: `你是一位供应链管理和物流行业资深专家，深度参与过多家大型制造企业和电商平台的供应链优化项目。你精通：供应链网络设计与优化、S&OP计划、仓储管理（WMS）、运输管理（TMS）、冷链物流、跨境物流合规、供应链韧性构建（去中心化/多元化备货）、数字供应链（供应链可视化/区块链溯源）、采购管理与供应商开发、逆向物流管理。`
+  },
+  realestate: {
+    label: '房地产 / 建筑',
+    sub: '开发·物业·工程',
+    icon: '🏢',
+    expert: `你是一位拥有20年从业经验的房地产与建筑行业战略顾问，深度参与过多个百亿级项目的开发与运营。你精通：房地产开发全流程管理、商业地产运营（REITs/购物中心）、保障性住房政策、建筑工程项目管理（BIM/EPC）、绿色建筑（LEED/碳中和设计）、物业管理创新、房地产金融（CMBS/抵押融资）、城市更新与TOD开发模式、当前房地产调控政策理解。`
+  },
+  government: {
+    label: '政府 / 公共服务',
+    sub: '政务数字化·公共政策',
+    icon: '🏛',
+    expert: `你是一位深耕政府数字化和公共政策领域的资深顾问，曾为多个省级和国家级政府信息化项目提供战略咨询。你精通：电子政务与政务服务数字化、智慧城市规划与建设、政府数据治理与开放共享、公共政策设计与评估、政府采购合规管理、公共卫生应急体系、政府绩效管理、政企合作（PPP模式）、数字政府安全合规（等保2.0）、政务大数据应用。`
+  },
+  general: {
+    label: '通用 / 综合',
+    sub: '跨行业综合分析',
+    icon: '🌐',
+    expert: `你是一位拥有麦肯锡、BCG等顶尖咨询公司从业背景的全能型战略顾问，擅长跨行业视角分析。你熟练运用MECE原则、SWOT、波士顿矩阵、价值链分析、商业模式画布等分析工具，能从战略、运营、财务、市场、人才等多个维度对方案进行系统性诊断与优化建议，善于发现行业共性问题与跨界创新机会。`
+  }
+};
+
+const OPTS_CONFIG = [
+  { key: 'benchmark', label: '行业基准对比', icon: '📊' },
+  { key: 'competitive', label: '竞争格局', icon: '⚔' },
+  { key: 'market', label: '市场机会', icon: '📈' },
+  { key: 'tech', label: '技术可行性', icon: '🔧' },
+  { key: 'finance', label: '财务影响', icon: '💵' },
+  { key: 'risk', label: '风险评估', icon: '⚠' },
+  { key: 'roadmap', label: '实施路径', icon: '🗺' },
+  { key: 'cases', label: '行业案例', icon: '📑' }
+];
+
+const PROVIDERS = {
+  siliconflow: {
+    name: '硅基流动',
+    sub: '国内免费·推荐首选',
+    free: true,
+    endpoint: 'https://api.siliconflow.cn/v1',
+    keyLink: 'https://cloud.siliconflow.cn/account/ak',
+    keyHint: '注册即送免费额度',
+    models: [
+      { id: 'Qwen/Qwen2.5-72B-Instruct',        name: 'Qwen2.5-72B',      desc: '推荐·中文最强' },
+      { id: 'deepseek-ai/DeepSeek-V3',           name: 'DeepSeek-V3',      desc: '推理全能' },
+      { id: 'Qwen/Qwen2.5-32B-Instruct',         name: 'Qwen2.5-32B',      desc: '均衡快速' },
+      { id: 'meta-llama/Llama-3.3-70B-Instruct', name: 'Llama 3.3 70B',    desc: '多语言强' }
+    ]
+  },
+  groq: {
+    name: 'Groq',
+    sub: '永久免费·极速推理',
+    free: true,
+    endpoint: 'https://api.groq.com/openai/v1',
+    keyLink: 'https://console.groq.com/keys',
+    keyHint: '永久免费',
+    models: [
+      { id: 'llama-3.3-70b-versatile',  name: 'Llama 3.3 70B', desc: '推荐·免费旗舰' },
+      { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek-R1 70B', desc: '深度推理' },
+      { id: 'gemma2-9b-it',             name: 'Gemma2 9B',     desc: '轻量快速' },
+      { id: 'llama-3.1-8b-instant',     name: 'Llama 3.1 8B',  desc: '极速响应' }
+    ]
+  },
+  deepseek: {
+    name: 'DeepSeek',
+    sub: '国产旗舰·超低价',
+    free: false,
+    endpoint: 'https://api.deepseek.com/v1',
+    keyLink: 'https://platform.deepseek.com/api_keys',
+    keyHint: '≈¥1/百万token',
+    models: [
+      { id: 'deepseek-chat',     name: 'DeepSeek-V3',  desc: '综合旗舰' },
+      { id: 'deepseek-reasoner', name: 'DeepSeek-R1',  desc: '深度推理' }
+    ]
+  },
+  zhipu: {
+    name: '智谱 GLM',
+    sub: '国产免费·中文友好',
+    free: true,
+    endpoint: 'https://open.bigmodel.cn/api/paas/v4',
+    keyLink: 'https://open.bigmodel.cn/usercenter/apikeys',
+    keyHint: 'GLM-4-Flash免费',
+    models: [
+      { id: 'glm-4-flash',   name: 'GLM-4-Flash', desc: '完全免费' },
+      { id: 'glm-4-air',     name: 'GLM-4-Air',   desc: '性价比高' },
+      { id: 'glm-4-plus',    name: 'GLM-4-Plus',  desc: '能力均衡' },
+      { id: 'glm-4-long',    name: 'GLM-4-Long',  desc: '超长上下文' }
+    ]
+  },
+  ollama: {
+    name: 'Ollama',
+    sub: '完全本地·零费用',
+    free: true,
+    endpoint: 'http://localhost:11434/v1',
+    keyLink: 'https://ollama.ai',
+    keyHint: '无需 API Key',
+    models: [
+      { id: 'qwen2.5:72b',      name: 'Qwen2.5:72b',    desc: '中文推荐' },
+      { id: 'qwen2.5:7b',       name: 'Qwen2.5:7b',     desc: '轻量快速' },
+      { id: 'deepseek-r1:32b',  name: 'DeepSeek-R1:32b',desc: '本地推理' },
+      { id: 'llama3.1:8b',      name: 'Llama3.1:8b',    desc: '多语言' }
+    ]
+  },
+  openrouter: {
+    name: 'OpenRouter',
+    sub: '海量模型·含免费',
+    free: true,
+    endpoint: 'https://openrouter.ai/api/v1',
+    keyLink: 'https://openrouter.ai/keys',
+    keyHint: '含多个免费模型',
+    models: [
+      { id: 'meta-llama/llama-3.3-70b-instruct:free',  name: 'Llama 3.3 70B',   desc: '免费旗舰' },
+      { id: 'google/gemma-3-27b-it:free',              name: 'Gemma3 27B',      desc: '免费推荐' },
+      { id: 'deepseek/deepseek-chat-v3-0324:free',     name: 'DeepSeek-V3',     desc: '免费推理' },
+      { id: 'qwen/qwen2.5-72b-instruct:free',          name: 'Qwen2.5-72B',     desc: '免费中文' }
+    ]
+  }
+};
+
+const DEPTH_TOKENS = { quick: '快速分析（800字以内，抓住核心）', standard: '标准分析（1500字左右，全面均衡）', deep: '深度分析（3000字以上，系统详尽，不要省略任何重要维度）' };
+const STYLE_DESC = {
+  professional: '以专业顾问报告风格输出，结构清晰、术语准确、逻辑严密，适合向专业团队汇报。',
+  executive: '以高管执行摘要风格输出，简明扼要、突出关键数字与结论，适合决策层快速阅读。',
+  actionable: '以行动导向风格输出，重点放在可立即执行的步骤与具体建议，适合执行团队直接使用。'
+};
+
+/* =====================================================================
+   INIT
+===================================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  renderDomains();
+  renderOpts();
+  renderProviderGrid();
+  renderModelGrid();
+  renderHistory();
+  document.getElementById('solInput').addEventListener('input', updateCharCount);
+  document.getElementById('cfgTemp').addEventListener('input', e => {
+    document.getElementById('tempVal').textContent = e.target.value;
+  });
+});
+
+/* =====================================================================
+   RENDER UI
+===================================================================== */
+function renderDomains() {
+  const g = document.getElementById('domainGrid');
+  g.innerHTML = Object.entries(DOMAINS).map(([k, d]) => `
+    <div class="domain-card ${S.domain === k ? 'sel' : ''}" onclick="selectDomain('${k}',this)">
+      <span class="d-icon">${d.icon}</span>
+      <div>
+        <div class="d-name">${d.label}</div>
+        <div class="d-sub">${d.sub}</div>
+      </div>
+    </div>`).join('');
+}
+
+function selectDomain(key, el) {
+  S.domain = key;
+  document.querySelectorAll('.domain-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function renderOpts() {
+  const g = document.getElementById('optGrid');
+  g.innerHTML = OPTS_CONFIG.map(o => `
+    <label class="opt-chip ${S.opts[o.key] ? 'on' : ''}" onclick="toggleOpt('${o.key}',this)">
+      <span class="opt-dot"></span>${o.icon} ${o.label}
+    </label>`).join('');
+}
+
+function toggleOpt(key, el) {
+  S.opts[key] = !S.opts[key];
+  el.classList.toggle('on', S.opts[key]);
+}
+
+function setDepth(d, el) {
+  S.depth = d;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.getAttribute('onclick') && b.getAttribute('onclick').includes('setDepth')) b.classList.remove('act');
+  });
+  el.classList.add('act');
+}
+
+function setStyle(s, el) {
+  S.style = s;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.getAttribute('onclick') && b.getAttribute('onclick').includes('setStyle')) b.classList.remove('act');
+  });
+  el.classList.add('act');
+}
+
+function updateCharCount() {
+  const v = document.getElementById('solInput').value;
+  document.getElementById('charCount').textContent = v.length + ' 字';
+}
+
+function clearInput() {
+  document.getElementById('solInput').value = '';
+  updateCharCount();
+}
+
+/* =====================================================================
+   SETTINGS
+===================================================================== */
+function toggleSettings() {
+  document.getElementById('settingsDrawer').classList.toggle('open');
+}
+
+function renderProviderGrid() {
+  const grid = document.getElementById('providerGrid');
+  grid.innerHTML = Object.entries(PROVIDERS).map(([key, p]) => `
+    <div class="provider-card ${S.provider === key ? 'sel' : ''}" onclick="selectProvider('${key}',this)">
+      <div class="provider-card-name">
+        ${p.name}${p.free ? '<span class="free-badge">FREE</span>' : ''}
+      </div>
+      <div class="provider-card-sub">${p.sub}</div>
+    </div>`).join('');
+}
+
+function selectProvider(key, el) {
+  S.provider = key;
+  document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  const p = PROVIDERS[key];
+  // Auto-fill endpoint
+  const epEl = document.getElementById('cfgEndpoint');
+  if (!epEl.dataset.manualEdit || epEl.value === (PROVIDERS[S._prevProvider]||{}).endpoint) {
+    epEl.value = p.endpoint;
+  }
+  S._prevProvider = key;
+  // Update key hint
+  document.getElementById('keyHintBadge').textContent = p.keyHint;
+  document.getElementById('cfgKeyHint').textContent =
+    key === 'ollama'
+      ? '本地运行无需 API Key，输入框留空或填 "ollama" 均可'
+      : '密钥仅存储在浏览器本地，不会上传到任何服务器';
+  const linkEl = document.getElementById('getKeyLink');
+  linkEl.href = p.keyLink || '#';
+  linkEl.style.display = p.keyLink ? 'inline-flex' : 'none';
+  // Pick default model
+  if (p.models.length && !p.models.find(m => m.id === S.model)) {
+    S.model = p.models[0].id;
+  }
+  renderModelGrid();
+}
+
+function renderModelGrid() {
+  const p = PROVIDERS[S.provider];
+  const models = p ? p.models : [];
+  const grid = document.getElementById('modelGrid');
+  if (!models.length) {
+    grid.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:6px 0">请在下方填写自定义模型 ID</div>';
+    return;
+  }
+  grid.innerHTML = models.map(m => `
+    <div class="model-opt ${S.model === m.id ? 'sel' : ''}" onclick="selectModel('${m.id}',this)">
+      <div class="model-name">${m.name}</div>
+      <div class="model-desc">${m.desc}</div>
+    </div>`).join('');
+}
+
+function selectModel(id, el) {
+  S.model = id;
+  document.querySelectorAll('.model-opt').forEach(m => m.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function saveSettings() {
+  S.apiKey     = document.getElementById('cfgApiKey').value.trim();
+  S.endpoint   = document.getElementById('cfgEndpoint').value.trim() || PROVIDERS[S.provider]?.endpoint || '';
+  S.temperature = parseFloat(document.getElementById('cfgTemp').value);
+  S.maxTokens  = parseInt(document.getElementById('cfgMaxTokens').value);
+  S.customModel = document.getElementById('cfgCustomModel').value.trim();
+
+  const data = {
+    provider: S.provider, apiKey: S.apiKey, endpoint: S.endpoint,
+    model: S.model, customModel: S.customModel,
+    temperature: S.temperature, maxTokens: S.maxTokens
+  };
+  localStorage.setItem('proplan_cfg', JSON.stringify(data));
+
+  const btn = document.querySelector('.cfg-save-btn');
+  btn.textContent = '✓ 已保存';
+  setTimeout(() => { btn.textContent = '保存配置'; }, 1500);
+  toggleSettings();
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem('proplan_cfg');
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d.provider && PROVIDERS[d.provider]) S.provider = d.provider;
+      if (d.apiKey)      { S.apiKey = d.apiKey;           document.getElementById('cfgApiKey').value = d.apiKey; }
+      if (d.endpoint)    { S.endpoint = d.endpoint;        document.getElementById('cfgEndpoint').value = d.endpoint; }
+      if (d.model)         S.model = d.model;
+      if (d.customModel) { S.customModel = d.customModel;  document.getElementById('cfgCustomModel').value = d.customModel; }
+      if (d.temperature != null) {
+        S.temperature = d.temperature;
+        document.getElementById('cfgTemp').value = d.temperature;
+        document.getElementById('tempVal').textContent = d.temperature;
+      }
+      if (d.maxTokens) { S.maxTokens = d.maxTokens; document.getElementById('cfgMaxTokens').value = d.maxTokens; }
+    }
+  } catch(e) {}
+  // Sync provider UI (endpoint + hints)
+  const p = PROVIDERS[S.provider];
+  if (p) {
+    const epEl = document.getElementById('cfgEndpoint');
+    if (!epEl.value) epEl.value = p.endpoint;
+    document.getElementById('keyHintBadge').textContent = p.keyHint;
+    const linkEl = document.getElementById('getKeyLink');
+    linkEl.href = p.keyLink || '#';
+    linkEl.style.display = p.keyLink ? 'inline-flex' : 'none';
+  }
+  try {
+    const h = localStorage.getItem('proplan_history');
+    if (h) S.history = JSON.parse(h);
+  } catch(e) {}
+}
+
+/* =====================================================================
+   PROMPT ENGINEERING
+===================================================================== */
+function buildSystemPrompt(domain, mode) {
+  const d = DOMAINS[domain] || DOMAINS.general;
+  const base = d.expert;
+
+  const modeInstructions = {
+    analyze: `
+
+请以该领域顶级顾问的视角，对用户提供的方案进行全面、专业、具体的分析。分析应当：
+1. 结合真实的行业数据、市场趋势和专业标准
+2. 给出客观的评分，有理有据
+3. 提出具体、可操作的洞察，而非泛泛而谈
+4. 运用该领域特有的专业术语和分析框架
+5. 识别潜在风险和被忽略的关键因素
+
+输出格式要求（使用Markdown，要精心组织结构，有标题、有表格、有要点）：
+- 从综合评分表格开始
+- 依次覆盖：概述评估、专业深度分析、行业市场洞察、优势亮点、不足与差距、风险识别
+- 结尾给出总体战略建议`,
+
+    optimize: `
+
+请以该领域顶级顾问的视角，针对用户提供的方案给出系统、专业、具体的优化建议。要求：
+1. 优先级排序：按影响力从高到低列出建议
+2. 每条建议必须包含：问题描述、具体建议措辞/方案、行业参考/最佳实践
+3. 结合行业标准、市场最新动向给出有依据的建议
+4. 避免泛化，每条建议都要具体到可以直接落地
+
+输出格式（Markdown）：
+- 🔴 高优先级改进（立即处理）
+- 🟡 重要提升建议（近期处理）
+- 🟢 锦上添花优化（有余力时处理）
+- 行业最佳实践参考
+- 分阶段实施路线图`,
+
+    rewrite: `
+
+请以该领域顶级专家的视角，对用户提供的方案进行专业改写与提升。要求：
+1. 保留原方案的核心思路和主要内容，但全面提升专业性和逻辑性
+2. 使用该领域的专业术语、框架和表达方式
+3. 优化结构、逻辑和表述，使其更具说服力和专业感
+4. 补充必要的专业细节、数据引用和行业背景
+5. 改写后方案应达到可直接用于正式提交的质量
+
+改写后必须在最后附上「改写说明」：简述主要改动点和改进理由。`
+  };
+
+  return base + (modeInstructions[mode] || modeInstructions.analyze);
+}
+
+function buildUserPrompt(solution, domain, mode, depth, style, opts) {
+  const d = DOMAINS[domain] || DOMAINS.general;
+  const selectedOpts = OPTS_CONFIG.filter(o => opts[o.key]).map(o => o.label);
+  const depthDesc = DEPTH_TOKENS[depth];
+  const styleDesc = STYLE_DESC[style];
+
+  const modeDescs = {
+    analyze: `请对以下【${d.label}】领域的方案进行全面深度分析`,
+    optimize: `请对以下【${d.label}】领域的方案给出系统优化建议`,
+    rewrite: `请对以下【${d.label}】领域的方案进行专业改写与提升`
+  };
+
+  let prompt = `${modeDescs[mode]}。\n\n`;
+  prompt += `**分析深度要求：** ${depthDesc}\n`;
+  prompt += `**输出风格：** ${styleDesc}\n`;
+
+  if (selectedOpts.length > 0) {
+    prompt += `**重点覆盖以下维度：** ${selectedOpts.join('、')}\n`;
+  }
+
+  prompt += `\n---\n\n**方案内容如下：**\n\n${solution}\n\n---\n\n`;
+
+  if (mode === 'analyze') {
+    prompt += `请开始分析。注意：分析要具体、专业，结合${d.label}领域的行业实际，给出有价值的洞察，而非泛泛而谈。`;
+  } else if (mode === 'optimize') {
+    prompt += `请给出具体、可落地的优化建议。每条建议要有具体操作步骤，结合${d.label}领域的行业最佳实践。`;
+  } else {
+    prompt += `请进行专业改写，改写后应达到可正式提交的质量标准。`;
+  }
+
+  return prompt;
+}
+
+/* =====================================================================
+   ANALYSIS ENTRY
+===================================================================== */
+async function startAnalysis(mode) {
+  const sol = document.getElementById('solInput').value.trim();
+  if (!sol) { showError('请先输入方案内容！'); return; }
+  const isOllama = S.provider === 'ollama';
+  if (!isOllama && !S.apiKey) { showError('请先在「模型配置」中填写 API Key！'); toggleSettings(); return; }
+
+  if (S.streaming) { stopStream(); return; }
+
+  const modelId = S.customModel || S.model;
+  const systemPrompt = buildSystemPrompt(S.domain, mode);
+  const userPrompt = buildUserPrompt(sol, S.domain, mode, S.depth, S.style, S.opts);
+
+  S.streaming = true;
+  S.rawResult = '';
+  S.tokenCount = 0;
+
+  setUIStreaming(true, mode);
+
+  try {
+    const messages = [{ role: 'user', content: userPrompt }];
+    await streamResponse(systemPrompt, messages, modelId,
+      chunk => { appendChunk(chunk); },
+      () => { onStreamComplete(mode, sol); }
+    );
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      if (err.isApiError) {
+        showApiError(err.status, err.body, err.provider);
+      } else if (err instanceof TypeError && /fetch|network|Failed/i.test(err.message)) {
+        const isOllamaLocal = S.provider === 'ollama' || S.endpoint.includes('localhost') || S.endpoint.includes('127.0.0.1');
+        showApiError(0, isOllamaLocal ? 'Ollama 本地服务未启动或端口不可达' : err.message, S.provider);
+      } else {
+        showError('发生错误：' + err.message);
+      }
+    }
+    setUIStreaming(false, mode);
+    S.streaming = false;
+  }
+}
+
+/* =====================================================================
+   STREAMING API CALLS  (all providers use OpenAI-compatible format)
+===================================================================== */
+async function streamResponse(systemPrompt, messages, modelId, onChunk, onComplete) {
+  S.abortCtrl = new AbortController();
+  await streamOpenAI(systemPrompt, messages, modelId, onChunk, onComplete);
+}
+
+async function streamOpenAI(systemPrompt, messages, modelId, onChunk, onComplete) {
+  const endpoint = S.endpoint.replace(/\/$/, '') || 'https://api.siliconflow.cn/v1';
+  // Ollama doesn't require Authorization; other providers do
+  const isOllama = endpoint.includes('localhost') || endpoint.includes('127.0.0.1') || endpoint.includes('ollama');
+  const headers = { 'Content-Type': 'application/json' };
+  if (!isOllama && S.apiKey) headers['Authorization'] = `Bearer ${S.apiKey}`;
+  // OpenRouter requires a Referer / HTTP-Referer header
+  if (endpoint.includes('openrouter')) headers['HTTP-Referer'] = 'https://proplan.ai';
+
+  const res = await fetch(`${endpoint}/chat/completions`, {
+    method: 'POST',
+    signal: S.abortCtrl.signal,
+    headers,
+    body: JSON.stringify({
+      model: modelId,
+      max_tokens: S.maxTokens,
+      temperature: S.temperature,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
+      stream: true
+    })
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    const apiErr = new Error(`HTTP ${res.status}`);
+    apiErr.isApiError = true;
+    apiErr.status = res.status;
+    apiErr.body = errBody;
+    apiErr.provider = S.provider;
+    throw apiErr;
+  }
+
+  await parseSSEStream(res, (evt, data) => {
+    if (data === '[DONE]') { setUIStreaming(false); S.streaming = false; onComplete(); return; }
+    const delta = data?.choices?.[0]?.delta?.content;
+    if (delta) onChunk(delta);
+    const usage = data?.usage?.completion_tokens;
+    if (usage) S.tokenCount = usage;
+  });
+}
+
+async function parseSSEStream(res, onEvent) {
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  let evtName = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+
+    for (const line of lines) {
+      if (line.startsWith('event: ')) {
+        evtName = line.slice(7).trim();
+      } else if (line.startsWith('data: ')) {
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') { onEvent('[DONE]', '[DONE]'); continue; }
+        try { onEvent(evtName, JSON.parse(raw)); } catch(e) { onEvent(evtName, raw); }
+        evtName = '';
+      }
+    }
+  }
+}
+
+function stopStream() {
+  if (S.abortCtrl) S.abortCtrl.abort();
+  S.streaming = false;
+  setUIStreaming(false);
+}
+
+/* =====================================================================
+   UI STATE MANAGEMENT
+===================================================================== */
+function setUIStreaming(on, mode) {
+  const btns = ['btnAnalyze', 'btnOptimize', 'btnRewrite'];
+  btns.forEach(id => { document.getElementById(id).disabled = on; });
+  document.getElementById('streamingBar').style.display = on ? 'flex' : 'none';
+
+  if (on) {
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('resultContent').style.display = 'block';
+    document.getElementById('resultContent').innerHTML = '';
+    document.getElementById('resultToolbar').style.display = 'flex';
+    updateModeBadge(mode);
+
+    const dots = { analyze: '🔍', optimize: '✨', rewrite: '✍' };
+    document.getElementById('streamMsg').textContent = `${dots[mode]} AI 正在${mode === 'analyze' ? '深度分析' : mode === 'optimize' ? '生成优化建议' : '智能改写'}中，请稍候…`;
+
+    setStatus('分析中…', true);
+    switchTab('result', document.getElementById('tab-result'));
+  } else {
+    setStatus('就绪', false);
+    document.getElementById('tokenInfo').textContent = S.tokenCount > 0 ? `输出 ${S.tokenCount} tokens` : '';
+  }
+}
+
+function updateModeBadge(mode) {
+  const badge = document.getElementById('modeBadge');
+  const configs = {
+    analyze: { cls: 'badge-analyze', text: '分析报告' },
+    optimize: { cls: 'badge-optimize', text: '优化建议' },
+    rewrite: { cls: 'badge-rewrite', text: '改写输出' }
+  };
+  const c = configs[mode] || configs.analyze;
+  badge.className = `mode-badge ${c.cls}`;
+  badge.textContent = c.text;
+}
+
+function setStatus(text, active) {
+  document.getElementById('statusText').textContent = text;
+  const dot = document.getElementById('statusDot');
+  dot.style.background = active ? 'var(--c3)' : 'var(--c2)';
+  dot.style.boxShadow = active ? '0 0 6px var(--c3)' : '0 0 6px var(--c2)';
+}
+
+/* =====================================================================
+   RESULT RENDERING
+===================================================================== */
+let _renderTimer = null;
+function appendChunk(chunk) {
+  S.rawResult += chunk;
+  S.tokenCount++;
+  // throttled render
+  if (!_renderTimer) {
+    _renderTimer = setTimeout(() => {
+      document.getElementById('resultContent').innerHTML = renderMarkdown(S.rawResult);
+      scrollToBottom();
+      document.getElementById('streamStat').textContent = `~${S.tokenCount} tokens`;
+      _renderTimer = null;
+    }, 60);
+  }
+}
+
+function scrollToBottom() {
+  const el = document.getElementById('resultScroll');
+  el.scrollTop = el.scrollHeight;
+}
+
+function onStreamComplete(mode, originalSolution) {
+  clearTimeout(_renderTimer);
+  _renderTimer = null;
+  document.getElementById('resultContent').innerHTML = renderMarkdown(S.rawResult);
+
+  // Save history
+  const entry = {
+    id: Date.now(),
+    mode,
+    domain: S.domain,
+    domainLabel: DOMAINS[S.domain]?.label || S.domain,
+    depth: S.depth,
+    time: new Date().toLocaleString('zh-CN'),
+    preview: S.rawResult.slice(0, 120).replace(/[#*`\n]/g, ' '),
+    result: S.rawResult,
+    original: originalSolution
+  };
+  S.history.unshift(entry);
+  if (S.history.length > 20) S.history.pop();
+  localStorage.setItem('proplan_history', JSON.stringify(S.history));
+  renderHistory();
+}
+
+/* =====================================================================
+   MARKDOWN RENDERER
+===================================================================== */
+function renderMarkdown(md) {
+  if (!md) return '';
+  let html = md
+    // escape
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // fenced code blocks
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
+    `<pre><code class="lang-${lang}">${code.trim()}</code></pre>`);
+
+  // tables
+  html = html.replace(/(\|[^\n]+\|\n)((?:\|[-:| ]+\|\n))((?:\|[^\n]+\|\n?)+)/g, (_, header, sep, rows) => {
+    const ths = header.split('|').slice(1, -1).map(c => `<th>${c.trim()}</th>`).join('');
+    const trs = rows.trim().split('\n').map(r => {
+      const tds = r.split('|').slice(1, -1).map(c => `<td>${inlineMd(c.trim())}</td>`).join('');
+      return `<tr>${tds}</tr>`;
+    }).join('');
+    return `<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
+  });
+
+  // headings
+  html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+  // blockquotes
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote><p>$1</p></blockquote>');
+
+  // hr
+  html = html.replace(/^---+$/gm, '<hr>');
+
+  // unordered lists (groups)
+  html = html.replace(/((?:^[-*] .+\n?)+)/gm, match => {
+    const items = match.trim().split('\n').map(l => `<li>${inlineMd(l.replace(/^[-*] /, ''))}</li>`).join('');
+    return `<ul>${items}</ul>`;
+  });
+
+  // ordered lists
+  html = html.replace(/((?:^\d+\. .+\n?)+)/gm, match => {
+    const items = match.trim().split('\n').map(l => `<li>${inlineMd(l.replace(/^\d+\. /, ''))}</li>`).join('');
+    return `<ol>${items}</ol>`;
+  });
+
+  // paragraphs (lines not already wrapped)
+  html = html.replace(/^(?!<[a-zA-Z]|$)(.+)$/gm, line => `<p>${inlineMd(line)}</p>`);
+
+  // clean up empty lines
+  html = html.replace(/\n{3,}/g, '\n\n');
+
+  return html;
+}
+
+function inlineMd(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+    .replace(/(★+)(☆*)/g, '<span class="score-star">$1</span><span style="opacity:.35">$2</span>');
+}
+
+/* =====================================================================
+   TAB SWITCHING
+===================================================================== */
+function switchTab(name, el) {
+  document.querySelectorAll('.out-tab').forEach(t => t.classList.remove('act'));
+  document.querySelectorAll('.out-tab-pane').forEach(p => p.classList.remove('act'));
+  el.classList.add('act');
+  document.getElementById(`pane-${name}`).classList.add('act');
+  if (name === 'history') renderHistory();
+}
+
+/* =====================================================================
+   COMPARE
+===================================================================== */
+function sendToCompare() {
+  const sol = document.getElementById('solInput').value.trim();
+  document.getElementById('compareOrig').textContent = sol || '（无原始内容）';
+  document.getElementById('compareNew').innerHTML = renderMarkdown(S.rawResult);
+  switchTab('compare', document.getElementById('tab-compare'));
+}
+
+/* =====================================================================
+   COPY / EXPORT
+===================================================================== */
+function copyResult() {
+  navigator.clipboard.writeText(S.rawResult).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ 已复制';
+    btn.classList.add('success');
+    setTimeout(() => { btn.textContent = '📋 复制'; btn.classList.remove('success'); }, 2000);
+  });
+}
+
+function exportMd() {
+  downloadFile(S.rawResult, `方案分析_${Date.now()}.md`, 'text/markdown');
+}
+
+function exportTxt() {
+  const txt = S.rawResult.replace(/[#*`_]/g, '').replace(/\n{3,}/g, '\n\n');
+  downloadFile(txt, `方案分析_${Date.now()}.txt`, 'text/plain');
+}
+
+function downloadFile(content, name, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* =====================================================================
+   HISTORY
+===================================================================== */
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if (!S.history.length) {
+    el.innerHTML = '<div class="no-history">暂无历史记录</div>';
+    return;
+  }
+  const modeLabels = { analyze: '分析', optimize: '优化', rewrite: '改写' };
+  const modeColors = { analyze: 'badge-analyze', optimize: 'badge-optimize', rewrite: 'badge-rewrite' };
+  el.innerHTML = S.history.map(h => `
+    <div class="history-item" onclick="loadHistory(${h.id})">
+      <div class="history-hd">
+        <span class="mode-badge ${modeColors[h.mode] || 'badge-analyze'}">${modeLabels[h.mode] || h.mode}</span>
+        <span class="history-domain">${h.domainLabel}</span>
+        <span class="history-time">${h.time}</span>
+      </div>
+      <div class="history-preview">${h.preview}…</div>
+    </div>`).join('');
+}
+
+function loadHistory(id) {
+  const h = S.history.find(x => x.id === id);
+  if (!h) return;
+  S.rawResult = h.result;
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultContent').style.display = 'block';
+  document.getElementById('resultContent').innerHTML = renderMarkdown(h.result);
+  document.getElementById('resultToolbar').style.display = 'flex';
+  updateModeBadge(h.mode);
+  switchTab('result', document.getElementById('tab-result'));
+  if (h.original) document.getElementById('solInput').value = h.original;
+  updateCharCount();
+}
+
+function clearHistory() {
+  if (!confirm('确认清空所有历史记录？')) return;
+  S.history = [];
+  localStorage.removeItem('proplan_history');
+  renderHistory();
+}
+
+/* =====================================================================
+   ERROR
+===================================================================== */
+function showError(msg) {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultContent').style.display = 'block';
+  document.getElementById('resultContent').innerHTML = `
+    <div class="error-box">
+      <span class="error-icon">⚠</span>
+      <div><strong>出现错误</strong><br>${msg}</div>
+    </div>`;
+  document.getElementById('resultToolbar').style.display = 'none';
+}
+
+function showApiError(status, rawBody, providerKey) {
+  const p = PROVIDERS[providerKey] || {};
+  // Parse JSON error body if possible
+  let errMsg = rawBody || '';
+  try { const j = JSON.parse(rawBody); errMsg = j?.error?.message || j?.message || rawBody; } catch(e) {}
+
+  // Diagnose
+  const is401 = status === 401;
+  const is429 = status === 429;
+  const is403 = status === 403;
+  const isModel = status === 404 || (status === 400 && /model/i.test(errMsg));
+
+  let title, causes, actions = [];
+  if (is401 || is403) {
+    title = 'API Key 无效或认证失败';
+    causes = [
+      '填写的 API Key 不正确或已过期',
+      '所选服务平台与 Key 不匹配',
+      'Key 格式有误（如末尾有多余空格）'
+    ];
+  } else if (is429) {
+    title = '请求频率超限或余额不足';
+    causes = [
+      '免费额度已用完，需要充值',
+      '单位时间内请求次数过多（TPM/RPM 限制）',
+      '账号处于风控状态'
+    ];
+  } else if (isModel) {
+    title = '模型不存在或无访问权限';
+    causes = [
+      '当前账号未开通该模型的访问权限',
+      '模型 ID 填写有误',
+      '该平台近期下线了此模型'
+    ];
+  } else if (status === 0 || !status) {
+    title = '网络连接失败';
+    causes = [
+      '本地网络无法访问该 API 服务',
+      'Ollama 本地服务未启动（如使用 Ollama）',
+      'API Endpoint 地址填写错误'
+    ];
+  } else {
+    title = `API 请求失败（HTTP ${status}）`;
+    causes = ['服务端内部错误，请稍后重试', '当前模型负载过高'];
+  }
+
+  if (p.keyLink) {
+    actions.push(`<a href="${p.keyLink}" target="_blank" class="err-action-btn">→ 获取 / 查看 API Key</a>`);
+  }
+  actions.push(`<button class="err-action-btn" onclick="toggleSettings()">⚙ 重新配置</button>`);
+  if (is401 || is403) {
+    actions.push(`<button class="err-action-btn" onclick="testConnection()">⚡ 测试连接</button>`);
+  }
+
+  const causesHtml = causes.map(c => `<li>${c}</li>`).join('');
+  const actionsHtml = actions.join('');
+  const techHtml = errMsg ? `<div class="err-tech">HTTP ${status}: ${errMsg.slice(0, 300)}</div>` : '';
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultContent').style.display = 'block';
+  document.getElementById('resultContent').innerHTML = `
+    <div class="error-box">
+      <span class="error-icon">⚠</span>
+      <div style="flex:1">
+        <div><strong>${title}</strong></div>
+        <div class="err-detail-row" style="margin-top:6px">当前服务：<span style="color:var(--c0)">${p.name || providerKey}</span></div>
+        <ul class="err-list">${causesHtml}</ul>
+        ${techHtml}
+        <div class="err-actions">${actionsHtml}</div>
+      </div>
+    </div>`;
+  document.getElementById('resultToolbar').style.display = 'none';
+}
+
+async function testConnection() {
+  const btn = document.getElementById('cfgTestBtn');
+  const hintEl = document.getElementById('keyFormatHint');
+  // Read current form values (not yet saved)
+  const apiKey = document.getElementById('cfgApiKey').value.trim();
+  const endpoint = (document.getElementById('cfgEndpoint').value.trim() || S.endpoint).replace(/\/$/, '');
+  const providerKey = S.provider;
+  const p = PROVIDERS[providerKey] || {};
+  const modelId = S.customModel || S.model || (p.models?.[0]?.id ?? 'test');
+
+  btn.textContent = '⏳ 测试中...';
+  btn.className = 'cfg-test-btn';
+  hintEl.style.display = 'none';
+
+  const isOllama = endpoint.includes('localhost') || endpoint.includes('127.0.0.1') || endpoint.includes('ollama');
+  const headers = { 'Content-Type': 'application/json' };
+  if (!isOllama && apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+  if (endpoint.includes('openrouter')) headers['HTTP-Referer'] = 'https://proplan.ai';
+
+  try {
+    const res = await fetch(`${endpoint}/chat/completions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: modelId,
+        max_tokens: 8,
+        messages: [{ role: 'user', content: 'Hi' }],
+        stream: false
+      })
+    });
+    if (res.ok || res.status === 200) {
+      btn.textContent = '✓ 连接成功';
+      btn.className = 'cfg-test-btn ok';
+      hintEl.textContent = `模型 ${modelId} 响应正常`;
+      hintEl.style.display = 'block';
+    } else {
+      const body = await res.text();
+      btn.textContent = '✗ 连接失败';
+      btn.className = 'cfg-test-btn fail';
+      let errMsg = body;
+      try { const j = JSON.parse(body); errMsg = j?.error?.message || j?.message || body; } catch(e) {}
+      hintEl.textContent = `HTTP ${res.status}: ${errMsg.slice(0, 80)}`;
+      hintEl.style.display = 'block';
+    }
+  } catch(e) {
+    btn.textContent = '✗ 网络错误';
+    btn.className = 'cfg-test-btn fail';
+    hintEl.textContent = e.message.includes('fetch') ? '无法连接到 API 服务，请检查 Endpoint 地址' : e.message.slice(0, 80);
+    hintEl.style.display = 'block';
+  }
+  setTimeout(() => {
+    btn.textContent = '⚡ 验证连接';
+    btn.className = 'cfg-test-btn';
+    hintEl.style.display = 'none';
+  }, 6000);
+}
+
+/* =====================================================================
+   FILE UPLOAD & PARSING
+===================================================================== */
+// Configure PDF.js worker
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+const FILE_ICONS = {
+  pdf:'📄', docx:'📝', doc:'📝',
+  pptx:'📊', ppt:'📊',
+  xlsx:'📈', xls:'📈',
+  txt:'📃', md:'📃', csv:'📋'
+};
+
+let _fileIdCounter = 0;
+
+function onDragOver(e) {
+  e.preventDefault(); e.stopPropagation();
+  document.getElementById('uploadZone').classList.add('drag-over');
+}
+function onDragLeave(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+}
+function onDrop(e) {
+  e.preventDefault(); e.stopPropagation();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length) processFiles(files);
+}
+function handleFileInput(e) {
+  processFiles(Array.from(e.target.files));
+  e.target.value = '';
+}
+function processFiles(files) {
+  files.forEach(f => parseAndAddFile(f));
+}
+
+async function parseAndAddFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const id = ++_fileIdCounter;
+  addFileChip(id, file.name, ext, file.size);
+
+  try {
+    let text = '';
+    if (ext === 'pdf') {
+      text = await parsePDF(file, id);
+    } else if (ext === 'docx' || ext === 'doc') {
+      text = await parseDOCX(file);
+    } else if (ext === 'pptx' || ext === 'ppt') {
+      text = await parsePPTX(file);
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      text = await parseXLSX(file);
+    } else if (['txt','md','csv','json'].includes(ext)) {
+      text = await parseTXT(file);
+    } else {
+      throw new Error('暂不支持该格式');
+    }
+
+    if (!text || !text.trim()) throw new Error('未提取到文字内容');
+    setChipStatus(id, 'ok', `已提取 ${text.trim().length.toLocaleString()} 字`);
+    appendFileText(file.name, text.trim());
+  } catch (err) {
+    setChipStatus(id, 'err', err.message.slice(0, 50));
+  }
+}
+
+function addFileChip(id, name, ext, size) {
+  const icon  = FILE_ICONS[ext] || '📎';
+  const sizeStr = size < 1048576
+    ? (size / 1024).toFixed(1) + ' KB'
+    : (size / 1048576).toFixed(2) + ' MB';
+
+  const chip = document.createElement('div');
+  chip.className = 'file-chip';
+  chip.id = `chip-${id}`;
+  chip.innerHTML = `
+    <span class="file-chip-icon">${icon}</span>
+    <div class="file-chip-info">
+      <div class="file-chip-name" title="${name}">${name}</div>
+      <div class="file-chip-meta">
+        <span>${sizeStr}</span>
+        <span id="chipStatus-${id}" class="chip-status cs-loading">⏳ 解析中…</span>
+      </div>
+      <div class="parse-progress" id="prog-${id}">
+        <div class="parse-progress-bar" id="progbar-${id}"></div>
+      </div>
+    </div>
+    <span class="chip-rm" onclick="removeChip(${id})" title="移除">✕</span>`;
+
+  document.getElementById('fileList').appendChild(chip);
+  document.getElementById('uploadActions').style.display = 'flex';
+}
+
+function setChipStatus(id, state, msg) {
+  const el = document.getElementById(`chipStatus-${id}`);
+  if (!el) return;
+  const prog = document.getElementById(`prog-${id}`);
+  if (prog) prog.style.display = 'none';
+  if (state === 'ok') {
+    el.className = 'chip-status cs-ok';
+    el.textContent = '✓ ' + msg;
+  } else {
+    el.className = 'chip-status cs-err';
+    el.textContent = '✗ ' + msg;
+  }
+}
+
+function setChipProgress(id, pct) {
+  const prog = document.getElementById(`prog-${id}`);
+  const bar  = document.getElementById(`progbar-${id}`);
+  if (!prog || !bar) return;
+  prog.style.display = 'block';
+  bar.style.width = pct + '%';
+}
+
+function removeChip(id) {
+  const el = document.getElementById(`chip-${id}`);
+  if (el) el.remove();
+  if (!document.getElementById('fileList').children.length) {
+    document.getElementById('uploadActions').style.display = 'none';
+  }
+}
+
+function clearAllFiles() {
+  document.getElementById('fileList').innerHTML = '';
+  document.getElementById('uploadActions').style.display = 'none';
+}
+
+function appendFileText(filename, text) {
+  const ta  = document.getElementById('solInput');
+  const sep = ta.value.trim()
+    ? `\n\n${'─'.repeat(28)}\n📄 来源：${filename}\n${'─'.repeat(28)}\n\n`
+    : `📄 来源：${filename}\n${'─'.repeat(28)}\n\n`;
+  ta.value += sep + text;
+  updateCharCount();
+}
+
+/* ---- Library Lazy Loader ---- */
+// Fallback URLs tried in order when head script fails to load
+const _LIB_URLS = {
+  pdfjsLib: ['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+             'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'],
+  mammoth:  ['https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js',
+             'https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js'],
+  JSZip:    ['https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+             'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'],
+  XLSX:     ['https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+             'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js']
+};
+
+function _loadScript(url) {
+  return new Promise(resolve => {
+    // Reuse existing tag if already injected
+    const existing = document.querySelector(`script[src="${CSS.escape ? url : url}"]`);
+    if (existing) {
+      if (existing._ok) { resolve(true); return; }
+      existing.addEventListener('load',  () => resolve(true),  { once: true });
+      existing.addEventListener('error', () => resolve(false), { once: true });
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload  = () => { s._ok = true; resolve(true); };
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+  });
+}
+
+async function _ensureLib(globalName) {
+  if (window[globalName]) return;
+  const urls = _LIB_URLS[globalName] || [];
+  for (const url of urls) {
+    const ok = await _loadScript(url);
+    if (ok && window[globalName]) {
+      if (globalName === 'pdfjsLib') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      return;
+    }
+  }
+  const names = { pdfjsLib:'PDF.js', mammoth:'mammoth.js', JSZip:'JSZip', XLSX:'SheetJS' };
+  throw new Error(`${names[globalName]||globalName} 库加载失败，请检查网络连接后刷新重试`);
+}
+
+/* ---- Parsers ---- */
+
+async function parsePDF(file, chipId) {
+  await _ensureLib('pdfjsLib');
+  const buf  = await file.arrayBuffer();
+  const pdf  = await pdfjsLib.getDocument({ data: buf }).promise;
+  const total = pdf.numPages;
+  let out = '';
+  for (let i = 1; i <= total; i++) {
+    setChipProgress(chipId, Math.round((i / total) * 90));
+    const page = await pdf.getPage(i);
+    const tc   = await page.getTextContent();
+    // Reconstruct reading order: group items by Y, join X-sorted
+    const lines = {};
+    tc.items.forEach(item => {
+      const y = Math.round(item.transform[5]);
+      (lines[y] = lines[y] || []).push(item);
+    });
+    const pageText = Object.keys(lines)
+      .sort((a, b) => b - a)
+      .map(y => lines[y].sort((a, b) => a.transform[4] - b.transform[4]).map(x => x.str).join(''))
+      .join('\n');
+    if (pageText.trim()) out += `\n[第 ${i} 页]\n${pageText}`;
+  }
+  setChipProgress(chipId, 100);
+  return out;
+}
+
+async function parseDOCX(file) {
+  await _ensureLib('mammoth');
+  const buf    = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: buf });
+  if (result.messages && result.messages.some(m => m.type === 'error')) {
+    console.warn('mammoth warnings:', result.messages);
+  }
+  return result.value;
+}
+
+async function parsePPTX(file) {
+  await _ensureLib('JSZip');
+  const zip = await JSZip.loadAsync(file);
+
+  // Slide files, sorted numerically
+  const slideKeys = Object.keys(zip.files)
+    .filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+    .sort((a, b) => {
+      const na = parseInt(a.match(/slide(\d+)/)[1], 10);
+      const nb = parseInt(b.match(/slide(\d+)/)[1], 10);
+      return na - nb;
+    });
+
+  if (!slideKeys.length) throw new Error('未找到幻灯片内容，请确认文件为 .pptx 格式');
+
+  let out = '';
+  for (const key of slideKeys) {
+    const xml    = await zip.files[key].async('text');
+    const slideN = key.match(/slide(\d+)/)[1];
+
+    // Extract all <a:t> text nodes
+    const matches = xml.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+    const words   = matches
+      .map(m => m.replace(/<[^>]+>/g, '').trim())
+      .filter(Boolean);
+
+    // Extract speaker notes if present
+    const notesKey = key.replace('slides/slide', 'slideLayouts/slideLayout')
+      .replace(/slide(\d+)/, (_, n) => `slide${n}`)
+      .replace('slides/', 'notesSlides/notesSlide');
+    // simpler: check notesSlides folder
+    const notesPath = `ppt/notesSlides/notesSlide${slideN}.xml`;
+    let notes = '';
+    if (zip.files[notesPath]) {
+      const nxml = await zip.files[notesPath].async('text');
+      const nm = nxml.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+      const noteWords = nm.map(m => m.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+      if (noteWords.length) notes = `\n  [备注] ${noteWords.join(' ')}`;
+    }
+
+    if (words.length) out += `\n[幻灯片 ${slideN}]\n${words.join(' ')}${notes}\n`;
+  }
+  return out;
+}
+
+async function parseXLSX(file) {
+  await _ensureLib('XLSX');
+  const buf = await file.arrayBuffer();
+  const wb  = XLSX.read(buf, { type: 'array', cellText: true, cellDates: true });
+  let out = '';
+  wb.SheetNames.forEach(name => {
+    const ws  = wb.Sheets[name];
+    // Use CSV for compact text representation
+    const csv = XLSX.utils.sheet_to_csv(ws, { skipHidden: true, blankrows: false });
+    if (csv.trim()) out += `\n[工作表: ${name}]\n${csv}`;
+  });
+  return out;
+}
+
+async function parseTXT(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = e => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('文件读取失败'));
+    // Detect encoding: try UTF-8, fallback to GBK for Chinese txt
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+
+// Setup pdfjs worker after DOM + scripts are ready
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+});
+</script>
+</body>
+</html>
